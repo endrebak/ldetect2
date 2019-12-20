@@ -43,7 +43,7 @@ cpdef calc_covar(haplos, gmapfile, indfile, double NE, double CUTOFF):
 
     cdef:
         int i, j, k, pos1, pos2, len_allpos, toofar, n11, n10, n01, len_g1_int
-        double gpos1, gpos2, ee_const, len_g1, ee, df, theta, f11, f1, f2, b, Ds, Ds2, D, nind
+        double gpos1, gpos2, ee_const, len_g1, ee, df, theta, f11, f1, f2, b, Ds, Ds2, D, nind, thetas, thetas2
 
     nind = float(nind_int)
     pos2gpos = pd.read_table(gmapfile, index_col=0, header=None, sep=" ", squeeze=True)
@@ -63,24 +63,19 @@ cpdef calc_covar(haplos, gmapfile, indfile, double NE, double CUTOFF):
     ee_const = NE*4.0 / (2.0*nind)
     len_allpos = len(allpos)
     theta = s/(2.0*float(nind)+s)
-
-    # g1_range = range(len_g1)
+    thetas = (1-theta)*(1-theta)
+    thetas2 = (theta/2.0)*(1-theta/2.0)
 
     cdef double[:] pos2gpos_view
     cdef long[:] allpos_view
     cdef long[:] g1_view, g2_view
     cdef long[:, :] haps_view
-    # cdef cnp.ndarray[int8_t, ndim=2] haps_arr
-    # haps_arr = haps
-    # cdef int[::] haps_view
-    # g1_range_view
+    
     pos2gpos_view = pos2gpos.values
     allpos_view = allpos.values
     haps_view = haps
 
     for i in range(len_allpos):
-
-            # print("  i", i)
 
             pos1 = allpos_view[i]
 
@@ -116,13 +111,13 @@ cpdef calc_covar(haplos, gmapfile, indfile, double NE, double CUTOFF):
                     f2 = (n11+n01)/len_g1
                     D = f11 - f1*f2
                     Ds = D*ee
-                    Ds2 = (1-theta)*(1-theta)*Ds
+                    Ds2 = thetas*Ds
 
                     if fabs(Ds2) < CUTOFF:
                             j = j+1
                             continue
                     if i == j:
-                            Ds2 = Ds2 + (theta/2.0)*(1-theta/2.0)
+                            Ds2 = Ds2 + thetas2
 
                     result = (allrs[i], allrs[j], pos1, pos2, gpos1, gpos2, D, Ds2)
                     records.append(result)
