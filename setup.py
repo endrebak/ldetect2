@@ -28,7 +28,7 @@ extensions = [
         language="c"),
     Extension(
         "ldetect2.src.matrix_to_vector", ["ldetect2/src/matrix_to_vector.pyx"],
-        language="c++"),
+        language="c"),
 ]
 
 
