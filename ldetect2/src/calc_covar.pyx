@@ -51,10 +51,16 @@ cpdef calc_covar(haplos, gmapfile, indfile, double NE, double CUTOFF):
 
     allpos = haplos.pop(0) #.tolist()
     allrs = haplos.pop(1) #.tolist()
-    # haps = haplos.astype(np.int8)
     haps = haplos.values
 
+    # for i, (k, v) in enumerate(pos2gpos.items()):
+    #     print(k, v)
+    #     if i == 5:
+    #         break
+
     pos2gpos = pos2gpos[allpos]
+    # print(pos2gpos)
+    # raise
 
     records = []
 
@@ -70,7 +76,7 @@ cpdef calc_covar(haplos, gmapfile, indfile, double NE, double CUTOFF):
     cdef long[:] allpos_view
     cdef long[:] g1_view, g2_view
     cdef long[:, :] haps_view
-    
+
     pos2gpos_view = pos2gpos.values
     allpos_view = allpos.values
     haps_view = haps
@@ -119,9 +125,9 @@ cpdef calc_covar(haplos, gmapfile, indfile, double NE, double CUTOFF):
                     if i == j:
                             Ds2 = Ds2 + thetas2
 
-                    result = (allrs[i], allrs[j], pos1, pos2, gpos1, gpos2, D, Ds2)
-                    records.append(result)
+                    print(allrs[i], allrs[j], pos1, pos2, gpos1, gpos2, D, Ds2)
+                    # records.append(result)
                     j = j+1
 
-    outdf = pd.DataFrame.from_records(records)
-    return outdf
+    # outdf = pd.DataFrame.from_records(records)
+    # return outdf
