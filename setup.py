@@ -26,7 +26,11 @@ extensions = [
     Extension(
         "ldetect2.src.calc_covar", ["ldetect2/src/calc_covar.pyx"],
         language="c"),
+    Extension(
+        "ldetect2.src.matrix_to_vector", ["ldetect2/src/matrix_to_vector.pyx"],
+        language="c++"),
 ]
+
 
 setup(
     name="ldetect2",
