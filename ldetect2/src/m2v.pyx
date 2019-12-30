@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+"""C++ hashmaps used here"""
+
 from time import time
 
 import sys, math, gzip
@@ -70,56 +72,25 @@ cdef inline double corrcoeff(loc_map, int32_t x, int32_t y, double theta2):
         return 0.0
 
 
-def fill_loc_map(df, loc_map):
 
-    print("Inserting keys", file=sys.stderr)
-    s = df.copy().set_index(["i", "j"]).val
-    # print("filling loc_map", s, file=sys.stderr)
-    d = s.to_dict()
-    loc_map.update(d)
-    print("Done inserting keys", file=sys.stderr)
-
-
-def remove_from_loc_map(delete_before, loc_map):
-
-    print("Removing keys", file=sys.stderr)
-    keys_not_needed = []
-    for (i, j) in loc_map.keys():
-        if i < delete_before:
-            keys_not_needed.append((i, j)) 
-
-    for k in keys_not_needed:
-        del loc_map[k]
-
-    print("Done removing keys", file=sys.stderr)
-
-
-
-def read_covariances(f):
-    print("Reading file", file=sys.stderr)
-    df = pd.read_csv(f, sep=" ", usecols=[2, 3, 7], names="i j val".split(),
-                       dtype={"i": np.int32, "j": np.int32})
-    print("Done reading file", file=sys.stderr)
-    return df
-
-# def update_ipos(ipos, ipos_add):
-#     return np.concatenate([ipos, ipos_add])
-
-@cython.boundscheck(True)
+@cython.boundscheck(False)
 @cython.wraparound(False)
-@cython.initializedcheck(True)
-cpdef mat2vec(covariances, partitions, double theta2):
-
+@cython.initializedcheck(False)
+cpdef mat2vec(const int32_t [::1] ipos, const int32_t [::1] jpos, const double [::1] vals, partitions, double theta2):
 
     # should only take in ipos >= partitions.first_start
     # should only take in ipos <= partitions.last_start
+    ipos_unique_arr = np.unique(np.array(ipos))
+    cdef int32_t [::1] ipos_unique
+    ipos_unique = ipos_unique_arr
 
     cdef:
-        int32_t pstart, pend, curr_locus, curr_locus_index, end_locus, x, y, delta, p_num, delete_locus
+        int32_t pstart, pend, curr_locus, curr_locus_index, end_locus, x, y, delta, length = len(ipos_unique), i
         double val, double_x, double_y, corr
-        int32_t [::1] ipos
-        int32_t [::1] jpos
-        double [::1] vals
+
+    loc_map = {}
+    for i in range(len(ipos)):
+        loc_map[ipos[i], jpos[i]] = vals[i]
 
     curr_locus_index = 0
 
@@ -135,33 +106,10 @@ When checking whether x and y within range, use regular partition ends.
 snp_first and snp_last is just the first and last entry of the partitions/intervals
     """
 
-    cdef int32_t [::1] ipos_unique
-
-    loc_map = {}
-    df = read_covariances(covariances[0])
-    fill_loc_map(df, loc_map)
-    ipos_unique_arr = np.unique(df.i.values)
-    ipos_unique = ipos_unique_arr
-    # n_to_remove = 0
-
-    for p_num, p in enumerate(partitions.itertuples(index=False), 0):
-
-        # print("-----" * 5, file=sys.stderr)
-
-        if p_num + 1 < len(partitions):
-            df = read_covariances(covariances[p_num + 1])
-            fill_loc_map(df, loc_map)
-            ipos_unique_arr = np.concatenate([ ipos_unique_arr, np.unique(df.i.values) ])
-            ipos_unique = ipos_unique_arr
-
-        # curr_locus_index -= n_to_remove
-        length = len(ipos_unique)
-
-        print("At partiton {}, so we are {}% done".format(str(p), p_num/len(partitions)), file=sys.stderr)
+    for i, p in enumerate(partitions.itertuples(index=False)):
+        print("At partiton {}, so we are {}% done".format(str(p), i/len(partitions)), file=sys.stderr)
         pstart, pend, end_locus = p[0], p[1], p[2]
-        # print("At start curr_locus_index is", curr_locus_index, file=sys.stderr)
         curr_locus = ipos_unique[curr_locus_index]
-        # print("At start curr_locus is", curr_locus, file=sys.stderr)
         while curr_locus <= end_locus:
             x = curr_locus
             y = curr_locus
@@ -172,6 +120,7 @@ snp_first and snp_last is just the first and last entry of the partitions/interv
             corr = 0
             delta = 0
 
+            curr_locus = curr_locus
             # print("pstart", pstart)
             # print("pend", pend)
 
@@ -185,6 +134,7 @@ snp_first and snp_last is just the first and last entry of the partitions/interv
                     # print("here", file=sys.stderr)
                     corr += corrcoeff(loc_map, x, y, theta2)
                     # print("there", file=sys.stderr)
+
                 if delta != 0:
 
                     x = ipos_unique[curr_locus_index - delta + 1]
@@ -206,21 +156,3 @@ snp_first and snp_last is just the first and last entry of the partitions/interv
                 curr_locus = ipos_unique[curr_locus_index]
             else:
                 break
-
-
-        if p_num + 1 < len(partitions):
-            delete_locus = partitions.iloc[p_num + 1][0]
-        else:
-            delete_locus = end_locus
-
-        remove_from_loc_map(delete_locus, loc_map)
-        to_remove = ipos_unique_arr < end_locus
-        # n_to_remove = (ipos_unique_arr < end_locus).sum()
-
-        # print("At end curr_locus_index is", curr_locus_index, file=sys.stderr)
-        # curr_locus_index -= n_to_remove
-        # print("After removing {} elements it is".format(n_to_remove), curr_locus_index, file=sys.stderr)
-        ipos_unique_arr = ipos_unique_arr[~to_remove]
-        ipos_unique = ipos_unique_arr
-        curr_locus_index = np.where(ipos_unique_arr == curr_locus)[0][0]
-        # print("At end curr_locus is", curr_locus, file=sys.stderr)

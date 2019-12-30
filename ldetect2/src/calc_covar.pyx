@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-#cython: language_level=3, boundscheck=False, wraparound=False, initializedcheck=False, cdivision=True, 
+#cython: language_level=3, boundscheck=False, wraparound=False, initializedcheck=False, cdivision=True
 
 import sys, math, gzip
 import numpy as np
@@ -94,6 +94,11 @@ cpdef calc_covar(haplos, gmapfile, indfile, double NE, double CUTOFF):
                     pos2 = allpos_view[j]
                     gpos2 = pos2gpos_view[j]
 
+                    # if pos1 in [16134585, 16134589, 16211631] and pos2 in [16134585, 16134589, 16211631]:
+                    #     _print = True
+                    # else:
+                    #     _print = False
+
                     df = gpos2 - gpos1
                     ee = exp( - df * ee_const)
 
@@ -118,6 +123,15 @@ cpdef calc_covar(haplos, gmapfile, indfile, double NE, double CUTOFF):
                     D = f11 - f1*f2
                     Ds = D*ee
                     Ds2 = thetas*Ds
+
+                    # if _print:
+                    #     print("CUTOFF", CUTOFF)
+                    #     print("f11", f11)
+                    #     print("f1", f1)
+                    #     print("f2", f2)
+                    #     print("D", D)
+                    #     print("Ds", Ds)
+                    #     print("Ds2", Ds2)
 
                     if fabs(Ds2) < CUTOFF:
                             j = j+1
