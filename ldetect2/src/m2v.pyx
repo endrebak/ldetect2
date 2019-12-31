@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-"""C++ hashmaps used here"""
+"""High memory requirements on this one."""
 
 from time import time
 
